@@ -1,4 +1,4 @@
-# Exemples pour le cours LOG750 (H2024)
+# Exemples pour le cours LOG750 (A2024)
 
 Les code d'exemples sont visible dans le dossier `examples`.
 
@@ -18,5 +18,5 @@ Suivre les instructions sur ENA pour la mise en place de l'environment de travai
   - Création d'un shader simple (vertex avec une entrée, couleur de sortie fixe)
   - Création d'un VBO (contenant les positions en 2D) et VAO
 
-- `01_Triangles_bindless` : Application **OpenGL (4.6)** identique à `01_Triangles` mais en utilisant bindless/DSA.
+- `01_Triangles_bindless` : Application **OpenGL (4.6)** identique à `01_Triangles` mais en utilisant DSA. Cet exemple est à privilégier. 
 
