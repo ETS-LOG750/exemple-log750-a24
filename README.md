@@ -4,9 +4,9 @@ Les code d'exemples sont visible dans le dossier `examples`.
 
 Suivre les instructions sur ENA pour la mise en place de l'environment de travail:
 - Windows: Visual Studio ou Visual Studio Code
-- MacOS ou Linux: Visual Studio Code
+- Linux: Visual Studio Code
 
-**Version OpenGL**: 4.3 ou 4.6
+**Version OpenGL**: 4.6 (certains exemples en 4.3)
 
 ## Cours 01 (OpenGL, imGUI)
 

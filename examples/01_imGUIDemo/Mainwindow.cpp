@@ -14,7 +14,7 @@ MainWindow::MainWindow()
 int MainWindow::Initialisation()
 {
 	// OpenGL version (usefull for imGUI and other libraries)
-	const char* glsl_version = "#version 430 core";
+	const char* glsl_version = "#version 460 core";
 
 	// glfw: initialize and configure
 	// ------------------------------
@@ -22,7 +22,7 @@ int MainWindow::Initialisation()
 
 	// Request OpenGL 4.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -31,7 +31,7 @@ int MainWindow::Initialisation()
 
 	// glfw window creation
 	// --------------------
-	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Labo 1", NULL, NULL);
+	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "ImGui Demo", NULL, NULL);
 	if (m_window == NULL)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;

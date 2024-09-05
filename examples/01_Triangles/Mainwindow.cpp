@@ -33,7 +33,7 @@ int MainWindow::Initialisation()
 
 	// glfw window creation
 	// --------------------
-	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Triangles", NULL, NULL);
+	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Triangles (non DSA - OGL 4.3)", NULL, NULL);
 	if (m_window == NULL)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;
