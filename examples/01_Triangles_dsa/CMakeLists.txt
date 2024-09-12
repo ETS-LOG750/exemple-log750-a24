@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(01_Triangles)
+project(01_Triangles_dsa)
 
 # Add source files
 SET(SOURCE_FILES 
