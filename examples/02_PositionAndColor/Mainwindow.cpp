@@ -147,7 +147,7 @@ int MainWindow::InitializeGL()
 
 	// Allocations
 	glNamedBufferData(m_buffers[MainBuffer], 
-		long(sizeof(glm::vec3) * vertices.size()
+		long(sizeof(glm::vec3) * vertices.size() + sizeof(glm::vec4) * colors.size()), // Taille des données à transférer
 		nullptr,  // Données à transférer
 		GL_STATIC_DRAW // Utilisation des données (modification fréquente ou non)
 	);
