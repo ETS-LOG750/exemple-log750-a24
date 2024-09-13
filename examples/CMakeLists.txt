@@ -8,3 +8,4 @@ add_subdirectory(01_Triangles_dsa)
 
 # Seance 02: Position and Color
 add_subdirectory(02_PositionAndColor)
+add_subdirectory(02_PositionAndColor_ssbo)
