@@ -449,7 +449,7 @@ void MainWindow::updateGeometry()
 	}
 	
 	// Add data on the GPU (position)
-	glNamedBufferData(m_VBOs[Triangles], m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
+	glNamedBufferData(m_VBOs[Position], m_vertices.size() * sizeof(glm::vec3), m_vertices.data(), GL_STATIC_DRAW);
 	// Add data on the GPU (normals)
 	glNamedBufferData(m_VBOs[Normal], m_normals.size() * sizeof(glm::vec3), m_normals.data(), GL_STATIC_DRAW);
 }
