@@ -40,7 +40,7 @@ int MainWindow::Initialisation()
 
 	// glfw window creation
 	// --------------------
-	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Transformation", NULL, NULL);
+	m_window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Transformation", nullptr, nullptr);
 	if (m_window == NULL)
 	{
 		std::cerr << "Failed to create GLFW window" << std::endl;
@@ -140,7 +140,6 @@ int MainWindow::InitializeGL()
 	);
 
 	// Normal
-	glBindBuffer(GL_ARRAY_BUFFER, m_VAOs[Normal]);
 	int NormalLocation = m_mainShader->attributeLocation("vNormal");
 	if (NormalLocation == -1) {
 		std::cerr << "Error when loading main shader (attribute vNormal)\n";
@@ -338,7 +337,7 @@ void MainWindow::RenderScene()
 			float sinTheta = sin(theta);
 			// Avoid 0 division
 			if (sinTheta > 0.00001) {
-				q = (sin(theta * (1 - m_time)) * q1 + sin(m_time * theta) * q2) / sinTheta;
+				q = (float(sin(theta * (1 - m_time))) * q1 + float(sin(m_time * theta)) * q2) / sinTheta;
 			} else {
 				q = q1; 
 			}
