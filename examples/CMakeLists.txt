@@ -18,3 +18,6 @@ add_subdirectory(03_LightingNoCamera)
 add_subdirectory(04_Transformation)
 # - comparaison with different animations
 add_subdirectory(04_Animation)
+
+# Lab 02: Picking
+add_subdirectory(lab_02_Picking)
