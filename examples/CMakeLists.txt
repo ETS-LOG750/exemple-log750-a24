@@ -21,3 +21,11 @@ add_subdirectory(04_Animation)
 
 # Lab 02: Picking
 add_subdirectory(lab_02_Picking)
+
+# Seance 05: Geometrie
+# - draw squares
+add_subdirectory(05_DrawSquares)
+# - geometry shader
+add_subdirectory(05_GeometryShader)
+# - tesselation teapot
+add_subdirectory(05_TesselationTeapot)
