@@ -29,14 +29,14 @@ void MainWindow::FramebufferSizeCallback(int width, int height) {
 int MainWindow::Initialisation()
 {
 	// OpenGL version (usefull for imGUI and other libraries)
-	const char* glsl_version = "#version 430 core";
+	const char* glsl_version = "#version 460 core";
 
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -154,58 +154,79 @@ int MainWindow::InitializeGL()
 	glVertexAttribPointer(locUV, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(UvsOffset));
 	glEnableVertexAttribArray(locUV);
 
+
 	// Create FBO
-	glGenFramebuffers(1, &m_fboID);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fboID);
+	glCreateFramebuffers(1, &m_fboID);
 	// Create texture (simple to store the rendering)
-	glGenTextures(1, &m_texID);
-	glBindTexture(GL_TEXTURE_2D, m_texID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glCreateTextures(GL_TEXTURE_2D, 1, &m_texID);
+	glTextureStorage2D(m_texID, 1, GL_RGB8, SCR_WIDTH, SCR_HEIGHT);
+	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureParameteri(m_texID, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTextureParameteri(m_texID, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTextureParameteri(m_texID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTextureParameteri(m_texID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// Create texture (simple to store the positions)
-	glGenTextures(1, &m_texIDPos);
-	glBindTexture(GL_TEXTURE_2D, m_texIDPos);
+	glCreateTextures(GL_TEXTURE_2D, 1, &m_texIDPos);
+	// glGenTextures(1, &m_texIDPos);
+	// glBindTexture(GL_TEXTURE_2D, m_texIDPos);
 	// Note that we use GL_RGB16F for the precision of storing the position information
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureStorage2D(m_texIDPos, 1, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT);
+	glTextureParameteri(m_texIDPos, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTextureParameteri(m_texIDPos, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTextureParameteri(m_texIDPos, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTextureParameteri(m_texIDPos, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// Create render buffer (similar to a texture, but only to store temporary data that we will not access it)
 	unsigned int rboID;
-	glGenRenderbuffers(1, &rboID);
-	glBindRenderbuffer(GL_RENDERBUFFER, rboID);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	glCreateRenderbuffers(1, &rboID);
+	// glGenRenderbuffers(1, &rboID);
+	// glBindRenderbuffer(GL_RENDERBUFFER, rboID);
+	glNamedRenderbufferStorage(rboID, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
 	// Configuration
-	glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
-		GL_COLOR_ATTACHMENT0,  // 2. attachment point
-		GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
-		m_texID,             	// 4. tex ID
-		0);                    // 5. mipmap level: 0(base)
-	glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
-		GL_COLOR_ATTACHMENT1,  // 2. attachment point
-		GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
-		m_texIDPos,             	// 4. tex ID
-		0);                    // 5. mipmap level: 0(base)
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
-		GL_DEPTH_ATTACHMENT, // 2. attachment point
-		GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
-		rboID);              // 4. rbo ID
+	// glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
+	// 	GL_COLOR_ATTACHMENT0,  // 2. attachment point
+	// 	GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
+	// 	m_texID,             	// 4. tex ID
+	// 	0);                    // 5. mipmap level: 0(base)
+	// glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
+	// 	GL_COLOR_ATTACHMENT1,  // 2. attachment point
+	// 	GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
+	// 	m_texIDPos,             	// 4. tex ID
+	// 	0);                    // 5. mipmap level: 0(base)
+	// glFramebufferRenderbuffer(GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
+	// 	GL_DEPTH_ATTACHMENT, // 2. attachment point
+	// 	GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
+	// 	rboID);              // 4. rbo ID
 
-	GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(2, drawBuffers);
-	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	glNamedFramebufferTexture(m_fboID, GL_COLOR_ATTACHMENT0, m_texID, 0);
+	glNamedFramebufferTexture(m_fboID, GL_COLOR_ATTACHMENT1, m_texIDPos, 0);
+	glNamedFramebufferRenderbuffer(m_fboID, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboID);
+
+	// GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	// glDrawBuffers(2, drawBuffers);
+	// GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	// if (status != GL_FRAMEBUFFER_COMPLETE) {
+	// 	// Cas d�erreur
+	// 	std::cout << "error FBO!\n";
+	// 	return 5;
+	// }
+	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glNamedFramebufferDrawBuffers(m_fboID, 2, (GLenum[]){ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	GLenum status = glCheckNamedFramebufferStatus(m_fboID, GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
 		// Cas d�erreur
 		std::cout << "error FBO!\n";
 		return 5;
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
 
 
 	FramebufferSizeCallback(SCR_WIDTH, SCR_HEIGHT);
