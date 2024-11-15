@@ -29,14 +29,14 @@ void MainWindow::FramebufferSizeCallback(int width, int height) {
 int MainWindow::Initialisation()
 {
 	// OpenGL version (usefull for imGUI and other libraries)
-	const char* glsl_version = "#version 430 core";
+	const char* glsl_version = "#version 460 core";
 
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -222,7 +222,8 @@ int MainWindow::RenderLoop()
 
 		// Draw the mesh
 		glDeleteVertexArrays(1, &m.vao);
-		glDeleteBuffers(1, &m.vbo);
+		glDeleteBuffers(1, &m.vboPosition);
+		glDeleteBuffers(1, &m.vboNormal);
 	}
 	m_meshesGL.clear();
 
@@ -275,29 +276,67 @@ void MainWindow::loadObjFile()
 		meshGL.specularExponent = materials[meshes[i].materialID].Kn;
 
 		// Create its VAO and VBO object
-		glGenVertexArrays(1, &meshGL.vao);
-		glGenBuffers(1, &meshGL.vbo);
+		glCreateVertexArrays(1, &meshGL.vao);
+		glCreateBuffers(1, &meshGL.vboPosition);
+		glCreateBuffers(1, &meshGL.vboNormal);
+		std::cout << "Mesh " << i << " has " << meshGL.numVertices << " vertices\n";
 
-		// Fill VBO with vertices data
-		GLsizei dataSize = meshes[i].vertices.size() * sizeof(OBJLoader::Vertex);
-		GLsizei stride = sizeof(OBJLoader::Vertex);
-		GLsizeiptr positionOffset = 0;
-		GLsizeiptr normalOffset = sizeof(OBJLoader::Vertex::position);
+		// Split data into position and normal
+		std::vector<glm::vec3> positions(meshGL.numVertices);
+		std::vector<glm::vec3> normals(meshGL.numVertices);
+		for (unsigned int j = 0; j < meshGL.numVertices; ++j)
+		{
+			positions[j] = glm::vec3(meshes[i].vertices[j].position[0], meshes[i].vertices[j].position[1], meshes[i].vertices[j].position[2]);
+			normals[j] = glm::vec3(meshes[i].vertices[j].normal[0], meshes[i].vertices[j].normal[1], meshes[i].vertices[j].normal[2]);
+		}
+		std::cout << "Mesh " << i << " has " << meshGL.numVertices << " vertices\n";
+		// Here we will use only one VBO for all the data
+		glNamedBufferData(meshGL.vboPosition, sizeof(glm::vec3) * positions.size(), positions.data(), GL_STATIC_DRAW);
+		glNamedBufferData(meshGL.vboNormal, sizeof(glm::vec3) * normals.size(), normals.data(), GL_STATIC_DRAW);
 
-		glBindBuffer(GL_ARRAY_BUFFER, meshGL.vbo);
-		glBufferData(GL_ARRAY_BUFFER, dataSize, &meshes[i].vertices[0], GL_STATIC_DRAW);
-
-		// Set VAO that binds the shader vertices inputs to the buffer data
-		glBindVertexArray(meshGL.vao);
-
-		glUseProgram(m_mainShader->programId());
 		int PositionLoc = m_mainShader->attributeLocation("vPosition");
-		glVertexAttribPointer(PositionLoc, 3, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(positionOffset));
-		glEnableVertexAttribArray(PositionLoc);
+		glVertexArrayAttribFormat(meshGL.vao, 
+			PositionLoc, // Attribute index 
+			3, // Number of components
+			GL_FLOAT, // Type 
+			GL_FALSE, // Normalize 
+			0 // Relative offset (first component)
+		);
+		glVertexArrayVertexBuffer(meshGL.vao, 
+			PositionLoc, // Binding point 
+			meshGL.vboPosition, // VBO 
+			0, // Offset (when the position starts)
+			sizeof(glm::vec3) // Stride
+		);
+		glEnableVertexArrayAttrib(meshGL.vao, 
+			PositionLoc // Attribute index
+		);
+		glVertexArrayAttribBinding(meshGL.vao, 
+			PositionLoc, // Attribute index
+			PositionLoc  // Binding point
+		);
 
 		int NormalLoc = m_mainShader->attributeLocation("vNormal");
-		glVertexAttribPointer(NormalLoc, 3, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(normalOffset));
-		glEnableVertexAttribArray(NormalLoc);
+		glVertexArrayAttribFormat(meshGL.vao, 
+			NormalLoc, // Attribute index 
+			3, // Number of components
+			GL_FLOAT, // Type 
+			GL_FALSE, // Normalize 
+			0 // Relative offset (first component)
+		);
+		glVertexArrayVertexBuffer(meshGL.vao, 
+			NormalLoc, // Binding point 
+			meshGL.vboNormal, // VBO 
+			0, // Offset (when the position starts)
+			sizeof(glm::vec3) // Stride
+		);
+		glEnableVertexArrayAttrib(meshGL.vao, 
+			NormalLoc // Attribute index
+		);
+		glVertexArrayAttribBinding(meshGL.vao, 
+			NormalLoc, // Attribute index
+			NormalLoc  // Binding point
+		);
 
 		// Add it to the list
 		m_meshesGL.push_back(meshGL);

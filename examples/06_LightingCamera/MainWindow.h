@@ -81,7 +81,8 @@ private:
 	{
 		// ID VAO/VBO
 		GLuint vao;
-		GLuint vbo;
+		GLuint vboPosition;
+		GLuint vboNormal;
 
 		// Material information
 		glm::vec3  diffuse;
