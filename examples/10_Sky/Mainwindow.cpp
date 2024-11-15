@@ -25,14 +25,14 @@ MainWindow::MainWindow() :
 int MainWindow::Initialisation()
 {
     // OpenGL version (usefull for imGUI and other libraries)
-    const char* glsl_version = "#version 430 core";
+    const char* glsl_version = "#version 460 core";
 
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -162,12 +162,13 @@ int MainWindow::InitializeGL()
     }
 
     // Set texture unit (all 0)
+    // Not necessary because we specified binding in the shader
     m_skydomeShader->setInt(m_uSky.texSkydome, 0);
     m_mainShader->setInt(m_uMain.texSkydome, 0);
 
     std::cout << "Load geometry ... \n";
-    glGenVertexArrays(NumVAOs, m_VAOs);
-    glGenBuffers(NumBuffers, m_buffers);
+    glCreateVertexArrays(NumVAOs, m_VAOs);
+    glCreateBuffers(NumBuffers, m_buffers);
     initGeometrySphere();
 
     glEnable(GL_DEPTH_TEST);
@@ -211,15 +212,15 @@ void MainWindow::RenderScene()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     
+    // Use the same VAO for the skydome and the sphere
     glDisable(GL_DEPTH_TEST);
-    glBindVertexArray(m_VAOs[VAO_Sphere_Sky]);
+    glBindVertexArray(m_VAOs[VAO_Sphere]); 
     glUseProgram(m_skydomeShader->programId());
     glm::mat4 modelMatrix = glm::mat4(1.0);
     glm::mat4 viewMatrix = m_camera.viewMatrix();
     m_skydomeShader->setMat4(m_uSky.projMatrix, m_camera.projectionMatrix());
     m_skydomeShader->setMat3(m_uSky.viewRotMatrix, glm::mat3(viewMatrix));
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, TextureId);
+    glBindTextureUnit(0, TextureId);
     glDrawElements(GL_TRIANGLES, numTriSphere * 3, GL_UNSIGNED_INT, 0);
     
     glEnable(GL_DEPTH_TEST);
@@ -271,40 +272,41 @@ int MainWindow::RenderLoop()
 
 bool MainWindow::loadTexture(const std::string& path, unsigned int& textureID, GLint uvMode, GLint minMode, GLint magMode)
 {
-    glGenTextures(1, &textureID);
+    // OpenGL 4.6 -- need to specify the texture type
+	glCreateTextures(GL_TEXTURE_2D, 1, &textureID);
 
-    // Ask the library to flip the image horizontally
-    // This is necessary as TexImage2D assume "The first element corresponds to the lower left corner of the texture image"
-    // whereas stb_image load the image such "the first pixel pointed to is top-left-most in the image"
-    stbi_set_flip_vertically_on_load(true);
+	// Ask the library to flip the image horizontally
+	// This is necessary as TexImage2D assume "The first element corresponds to the lower left corner of the texture image"
+	// whereas stb_image load the image such "the first pixel pointed to is top-left-most in the image"
+	stbi_set_flip_vertically_on_load(true);
 
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrComponents, STBI_rgb_alpha);
-    if (data)
-    {
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        if (minMode == GL_LINEAR_MIPMAP_LINEAR) {
-            glGenerateMipmap(GL_TEXTURE_2D);
-        }
-        
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, uvMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, uvMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magMode);
+	int width, height, nrComponents;
+	unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrComponents, STBI_rgb_alpha);
+	if (data)
+	{
+		glTextureStorage2D(textureID, 1, GL_RGBA8, width, height);
+		glTextureSubImage2D(textureID, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		if (minMode == GL_LINEAR_MIPMAP_LINEAR) {
+			glGenerateTextureMipmap(textureID);
+		}
 
-        stbi_image_free(data);
+		glTextureParameteri(textureID, GL_TEXTURE_WRAP_S, uvMode);
+		glTextureParameteri(textureID, GL_TEXTURE_WRAP_T, uvMode);
+		glTextureParameteri(textureID, GL_TEXTURE_MIN_FILTER, minMode);
+		glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, magMode);
 
-        std::cout << "Texture loaded at path: " << path << std::endl;
-    }
-    else
-    {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-        return false;
-    }
+		stbi_image_free(data);
 
-    return true;
+		std::cout << "Texture loaded at path: " << path << std::endl;
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+		return false;
+	}
+
+	return true;
 }
 
 void MainWindow::initGeometrySphere()
@@ -417,42 +419,56 @@ void MainWindow::initGeometrySphere()
 
 
     // Copy indices informations
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[VBO_Sphere_Position]);
-    glBufferData(GL_ARRAY_BUFFER, long(sizeof(GLfloat) * vertices.size()), vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[VBO_Sphere_Normal]);
-    glBufferData(GL_ARRAY_BUFFER, long(sizeof(GLfloat) * normals.size()), normals.data(), GL_STATIC_DRAW);
+    glNamedBufferData(m_buffers[VBO_Sphere_Position], long(sizeof(GLfloat) * vertices.size()), vertices.data(), GL_STATIC_DRAW);
+    glNamedBufferData(m_buffers[VBO_Sphere_Normal], long(sizeof(GLfloat) * normals.size()), normals.data(), GL_STATIC_DRAW);
 
+    int PositionLoc = m_mainShader->attributeLocation("vPosition");
+    glVertexArrayAttribFormat(m_VAOs[VAO_Sphere], 
+        PositionLoc, // Attribute index 
+        3, // Number of components
+        GL_FLOAT, // Type 
+        GL_FALSE, // Normalize 
+        0 // Relative offset (first component)
+    );
+    glVertexArrayVertexBuffer(m_VAOs[VAO_Sphere], 
+        PositionLoc, // Binding point 
+        m_buffers[VBO_Sphere_Position], // VBO 
+        0, // Offset (when the position starts)
+        sizeof(glm::vec3) // Stride
+    );
+    glEnableVertexArrayAttrib(m_VAOs[VAO_Sphere], 
+        PositionLoc // Attribute index
+    );
+    glVertexArrayAttribBinding(m_VAOs[VAO_Sphere], 
+        PositionLoc, // Attribute index
+        PositionLoc  // Binding point
+    );
+
+    int NormalLoc = m_mainShader->attributeLocation("vNormal");
+    glVertexArrayAttribFormat(m_VAOs[VAO_Sphere], 
+        NormalLoc, // Attribute index 
+        3, // Number of components
+        GL_FLOAT, // Type 
+        GL_FALSE, // Normalize 
+        0 // Relative offset (first component)
+    );
+    glVertexArrayVertexBuffer(m_VAOs[VAO_Sphere], 
+        NormalLoc, // Binding point 
+        m_buffers[VBO_Sphere_Normal], // VBO 
+        0, // Offset (when the position starts)
+        sizeof(glm::vec3) // Stride
+    );
+    glEnableVertexArrayAttrib(m_VAOs[VAO_Sphere], 
+        NormalLoc // Attribute index
+    );
+    glVertexArrayAttribBinding(m_VAOs[VAO_Sphere], 
+        NormalLoc, // Attribute index
+        NormalLoc  // Binding point
+    );
 
     // Fill in indices EBO
     // Note: The current VAO will remember the call to glBindBuffer for a GL_ELEMENT_ARRAY_BUFFER.
     //			 However, we will need to call glDrawElements() instead of glDrawArrays().
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_buffers[EBO_Sphere]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
-
-    // VAO for the skybox
-    glBindVertexArray(m_VAOs[VAO_Sphere_Sky]);
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[VBO_Sphere_Position]);
-    glVertexAttribPointer(m_vSkyPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(m_vSkyPos);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_buffers[EBO_Sphere]);
-
-    // VAO for the normal shader
-    glBindVertexArray(m_VAOs[VAO_Sphere]);
-    // - Position
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[VBO_Sphere_Position]);
-    glVertexAttribPointer(m_vMainPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(m_vMainPos);
-    // - Normals
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[VBO_Sphere_Normal]);
-    glVertexAttribPointer(m_vMainNormal, 3, GL_FLOAT, GL_TRUE, 0, BUFFER_OFFSET(0));
-    glEnableVertexAttribArray(m_vMainNormal);
-    // - Indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_buffers[EBO_Sphere]);
-    
-    // Cleanup (optional)
-
-    // Do not desactivate EBO when the VAO is still activated
-    // as it will desactivate the EBO for this VAO 
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    glNamedBufferData(m_buffers[EBO_Sphere], sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
+    glVertexArrayElementBuffer(m_VAOs[VAO_Sphere], m_buffers[EBO_Sphere]);
 }

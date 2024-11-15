@@ -78,7 +78,7 @@ private:
 	int numTriSphere = numColSphere * (numRowSphere - 1) * 2 + 2 * numColSphere;
 
 	// VBO/VAO
-	enum VAO_IDs { VAO_Sphere_Sky, VAO_Sphere, NumVAOs };
+	enum VAO_IDs { VAO_Sphere, NumVAOs };
 	enum Buffer_IDs { VBO_Sphere_Position, VBO_Sphere_Normal, VBO_Sphere_UV, EBO_Sphere, NumBuffers };
 	GLuint m_VAOs[NumVAOs];
 	GLuint m_buffers[NumBuffers];

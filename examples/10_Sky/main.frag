@@ -1,7 +1,7 @@
-#version 400 core
+#version 460 core
 
 uniform vec3 cameraPos;
-uniform sampler2D texSkydome;
+layout(binding = 0) uniform sampler2D texSkydome;
 uniform bool useFresnel; 
 
 in vec3 fNormalWorld;

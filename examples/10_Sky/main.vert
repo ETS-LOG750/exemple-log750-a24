@@ -1,10 +1,10 @@
-#version 400 core
+#version 460 core
 
 uniform mat4 mvMatrix;
 uniform mat4 projMatrix;
 
-in vec4 vPosition;
-in vec3 vNormal;
+layout(location = 0) in vec4 vPosition;
+layout(location = 1) in vec3 vNormal;
 
 out vec3 fNormalWorld;
 out vec3 fPositionWorld;
