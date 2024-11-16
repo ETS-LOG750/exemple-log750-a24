@@ -89,6 +89,15 @@ void MainWindow::InitializeCallback() {
 		});
 }
 
+// Helper function to configure VBO
+inline void configureVBO(int location, int vaoID, int vboID, int nbComp, GLsizei stride) {
+	glVertexArrayVertexBuffer(vaoID, location, vboID, 0, stride);
+	glVertexArrayAttribFormat(vaoID, location, nbComp, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vaoID, location, location);
+	glEnableVertexArrayAttrib(vaoID, location);
+}
+
+
 int MainWindow::InitializeGL()
 {
 	// Enable the depth test
@@ -121,8 +130,8 @@ int MainWindow::InitializeGL()
 	// Load the 3D model from the obj file
 	loadObjFile();
 	// Create simple plane
-	glGenVertexArrays(NumVAOs, m_VAOs);
-	glGenBuffers(NumBuffers, m_buffers);
+	glCreateVertexArrays(NumVAOs, m_VAOs);
+	glCreateBuffers(NumBuffers, m_buffers);
 	// -- VBO
 	const int NumVertices = 4;
 	glm::vec3 Vertices[NumVertices] = {
@@ -137,93 +146,52 @@ int MainWindow::InitializeGL()
 		glm::vec2(0, 1),
 		glm::vec2(1, 1)
 	};
-	GLsizeiptr VerticesOffset = 0;
-	GLsizeiptr UvsOffset = sizeof(Vertices);
-	GLsizeiptr DataSize = UvsOffset + sizeof(Uvs);
-	glBindBuffer(GL_ARRAY_BUFFER, m_buffers[ArrayBuffer]);
-	glBufferData(GL_ARRAY_BUFFER, DataSize, nullptr, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, VerticesOffset, sizeof(Vertices), Vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, UvsOffset, sizeof(Uvs), Uvs);
-	// -- VAO
-	glBindVertexArray(m_VAOs[Triangles]);
-	glBindBuffer(GL_ARRAY_BUFFER, m_buffers[ArrayBuffer]);
-	int locPos = m_filterShader->attributeLocation("vPosition");
-	glVertexAttribPointer(locPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(VerticesOffset));
-	glEnableVertexAttribArray(locPos);
-	int locUV = m_filterShader->attributeLocation("vUV");
-	glVertexAttribPointer(locUV, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(UvsOffset));
-	glEnableVertexAttribArray(locUV);
 
+	glNamedBufferData(m_buffers[Position], sizeof(Vertices), Vertices, GL_STATIC_DRAW);
+	glNamedBufferData(m_buffers[UV], sizeof(Uvs), Uvs, GL_STATIC_DRAW);
+	
+	// -- VAO
+	int locPos = m_filterShader->attributeLocation("vPosition");
+	configureVBO(locPos, m_VAOs[Triangles], m_buffers[Position], 3, sizeof(glm::vec3));
+	int locUV = m_filterShader->attributeLocation("vUV");
+	configureVBO(locUV, m_VAOs[Triangles], m_buffers[UV], 2, sizeof(glm::vec2));
 
 	// Create FBO
 	glCreateFramebuffers(1, &m_fboID);
+
 	// Create texture (simple to store the rendering)
 	glCreateTextures(GL_TEXTURE_2D, 1, &m_texID);
 	glTextureStorage2D(m_texID, 1, GL_RGB8, SCR_WIDTH, SCR_HEIGHT);
-	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// Configure the texture
 	glTextureParameteri(m_texID, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTextureParameteri(m_texID, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTextureParameteri(m_texID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTextureParameteri(m_texID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
 	// Create texture (simple to store the positions)
 	glCreateTextures(GL_TEXTURE_2D, 1, &m_texIDPos);
-	// glGenTextures(1, &m_texIDPos);
-	// glBindTexture(GL_TEXTURE_2D, m_texIDPos);
-	// Note that we use GL_RGB16F for the precision of storing the position information
-	// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTextureStorage2D(m_texIDPos, 1, GL_RGB16F, SCR_WIDTH, SCR_HEIGHT);
+	// Configure the texture
 	glTextureParameteri(m_texIDPos, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTextureParameteri(m_texIDPos, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTextureParameteri(m_texIDPos, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTextureParameteri(m_texIDPos, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
 	// Create render buffer (similar to a texture, but only to store temporary data that we will not access it)
 	unsigned int rboID;
 	glCreateRenderbuffers(1, &rboID);
-	// glGenRenderbuffers(1, &rboID);
-	// glBindRenderbuffer(GL_RENDERBUFFER, rboID);
 	glNamedRenderbufferStorage(rboID, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-	// glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-	// Configuration
-	// glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
-	// 	GL_COLOR_ATTACHMENT0,  // 2. attachment point
-	// 	GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
-	// 	m_texID,             	// 4. tex ID
-	// 	0);                    // 5. mipmap level: 0(base)
-	// glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
-	// 	GL_COLOR_ATTACHMENT1,  // 2. attachment point
-	// 	GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
-	// 	m_texIDPos,             	// 4. tex ID
-	// 	0);                    // 5. mipmap level: 0(base)
-	// glFramebufferRenderbuffer(GL_FRAMEBUFFER,      // 1. fbo target: GL_FRAMEBUFFER
-	// 	GL_DEPTH_ATTACHMENT, // 2. attachment point
-	// 	GL_RENDERBUFFER,     // 3. rbo target: GL_RENDERBUFFER
-	// 	rboID);              // 4. rbo ID
-
+	
+	// Attach the texture to the FBO
 	glNamedFramebufferTexture(m_fboID, GL_COLOR_ATTACHMENT0, m_texID, 0);
 	glNamedFramebufferTexture(m_fboID, GL_COLOR_ATTACHMENT1, m_texIDPos, 0);
 	glNamedFramebufferRenderbuffer(m_fboID, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboID);
 
-	// GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	// glDrawBuffers(2, drawBuffers);
-	// GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	// if (status != GL_FRAMEBUFFER_COMPLETE) {
-	// 	// Cas d�erreur
-	// 	std::cout << "error FBO!\n";
-	// 	return 5;
-	// }
-	// glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glNamedFramebufferDrawBuffers(m_fboID, 2, (GLenum[]){ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	GLenum drawBuffers[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glNamedFramebufferDrawBuffers(m_fboID, 2, drawBuffers);
 	GLenum status = glCheckNamedFramebufferStatus(m_fboID, GL_FRAMEBUFFER);
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
-		// Cas d�erreur
+		// Cas d'erreur
 		std::cout << "error FBO!\n";
 		return 5;
 	}
@@ -249,7 +217,10 @@ void MainWindow::RenderImgui()
 		ImGui::Begin("Simple FBO");
 		ImGui::Checkbox("Active FBO", &m_activeFBO);
 		ImGui::Checkbox("Position tex", &m_usePositionTexture);
-		ImGui::Checkbox("Sobol filter", &m_useFilter);
+		ImGui::Checkbox("Kuwahara filter", &m_useFilter);
+		if(ImGui::SliderInt("Kernel size", &m_kernelSize, 1, 20)) {
+			m_filterShader->setInt(2, m_kernelSize);
+		}
 
 		ImGui::Text("Camera settings");
 		bool updateCamera = ImGui::SliderFloat("Longitude", &m_longitude, -180.f, 180.f);
@@ -320,6 +291,8 @@ void MainWindow::RenderScene()
 		// Active the filter shader
 		m_filterShader->bind();
 		m_filterShader->setBool(m_filterUniforms.useFilter, m_useFilter);
+		m_filterShader->setInt(2, m_kernelSize); // Set the number of iterations
+		m_filterShader->setVec2(3, glm::vec2(SCR_WIDTH, SCR_HEIGHT)); // Set the size of the texture
 		// Active the texture filled by the FBO
 		glActiveTexture(GL_TEXTURE0);
 		if (m_usePositionTexture) {
@@ -358,7 +331,8 @@ int MainWindow::RenderLoop()
 
 		// Draw the mesh
 		glDeleteVertexArrays(1, &m.vao);
-		glDeleteBuffers(1, &m.vbo);
+		glDeleteBuffers(1, &m.vboPosition);
+		glDeleteBuffers(1, &m.vboNormal);
 	}
 	m_meshesGL.clear();
 
@@ -411,29 +385,28 @@ void MainWindow::loadObjFile()
 		meshGL.specularExponent = materials[meshes[i].materialID].Kn;
 
 		// Create its VAO and VBO object
-		glGenVertexArrays(1, &meshGL.vao);
-		glGenBuffers(1, &meshGL.vbo);
+		glCreateVertexArrays(1, &meshGL.vao);
+		glCreateBuffers(1, &meshGL.vboPosition);
+		glCreateBuffers(1, &meshGL.vboNormal);
 
-		// Fill VBO with vertices data
-		GLsizei dataSize = meshes[i].vertices.size() * sizeof(OBJLoader::Vertex);
-		GLsizei stride = sizeof(OBJLoader::Vertex);
-		GLsizeiptr positionOffset = 0;
-		GLsizeiptr normalOffset = sizeof(OBJLoader::Vertex::position);
+		// Make unique vector to store the vertices and normal
+		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec3> normals;
+		for (const OBJLoader::Vertex& v : meshes[i].vertices)
+		{
+			vertices.push_back(glm::vec3(v.position[0], v.position[1], v.position[2]));
+			normals.push_back(glm::vec3(v.normal[0], v.normal[1], v.normal[2]));
+		}
 
-		glBindBuffer(GL_ARRAY_BUFFER, meshGL.vbo);
-		glBufferData(GL_ARRAY_BUFFER, dataSize, &meshes[i].vertices[0], GL_STATIC_DRAW);
-
-		// Set VAO that binds the shader vertices inputs to the buffer data
-		glBindVertexArray(meshGL.vao);
-
+		// Load the data on the GPU
+		glNamedBufferData(meshGL.vboPosition, sizeof(glm::vec3) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+		glNamedBufferData(meshGL.vboNormal, sizeof(glm::vec3) * normals.size(), normals.data(), GL_STATIC_DRAW);
+		// Configure the VAO
 		glUseProgram(m_mainShader->programId());
 		int PositionLoc = m_mainShader->attributeLocation("vPosition");
-		glVertexAttribPointer(PositionLoc, 3, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(positionOffset));
-		glEnableVertexAttribArray(PositionLoc);
-
+		configureVBO(PositionLoc, meshGL.vao, meshGL.vboPosition, 3, sizeof(glm::vec3));
 		int NormalLoc = m_mainShader->attributeLocation("vNormal");
-		glVertexAttribPointer(NormalLoc, 3, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(normalOffset));
-		glEnableVertexAttribArray(NormalLoc);
+		configureVBO(NormalLoc, meshGL.vao, meshGL.vboNormal, 3, sizeof(glm::vec3));
 
 		// Add it to the list
 		m_meshesGL.push_back(meshGL);

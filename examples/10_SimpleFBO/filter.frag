@@ -8,43 +8,60 @@ in vec2 fUV;
 // Out color
 out vec4 fColor;
 
-// From: https://www.shadertoy.com/view/Xdf3Rf
-float intensity(in vec4 color){
-	return sqrt((color.x*color.x)+(color.y*color.y)+(color.z*color.z));
+// Filter informations
+// Adapted from: https://blog.maximeheckel.com/posts/on-crafting-painterly-shaders/
+#define SECTOR_COUNT 8
+layout(location = 2) uniform int radius;
+layout(location = 3) uniform vec2 resolution;
+
+vec3 sampleColor(vec2 offset) {
+    vec2 coord = (gl_FragCoord.xy + offset) / resolution.xy;
+    return texture2D(iChannel0, coord).rgb;
 }
-vec3 sobel(float stepx, float stepy, vec2 center){
-	// get samples around pixel
-    float tleft = intensity(texture(iChannel0,center + vec2(-stepx,stepy)));
-    float left = intensity(texture(iChannel0,center + vec2(-stepx,0)));
-    float bleft = intensity(texture(iChannel0,center + vec2(-stepx,-stepy)));
-    float top = intensity(texture(iChannel0,center + vec2(0,stepy)));
-    float bottom = intensity(texture(iChannel0,center + vec2(0,-stepy)));
-    float tright = intensity(texture(iChannel0,center + vec2(stepx,stepy)));
-    float right = intensity(texture(iChannel0,center + vec2(stepx,0)));
-    float bright = intensity(texture(iChannel0,center + vec2(stepx,-stepy)));
- 
-	// Sobel masks (see http://en.wikipedia.org/wiki/Sobel_operator)
-	//        1 0 -1     -1 -2 -1
-	//    X = 2 0 -2  Y = 0  0  0
-	//        1 0 -1      1  2  1
-	
-	// You could also use Scharr operator:
-	//        3 0 -3        3 10   3
-	//    X = 10 0 -10  Y = 0  0   0
-	//        3 0 -3        -3 -10 -3
- 
-    float x = tleft + 2.0*left + bleft - tright - 2.0*right - bright;
-    float y = -tleft - 2.0*top - tright + bleft + 2.0 * bottom + bright;
-    float color = sqrt((x*x) + (y*y));
-    return vec3(color,color,color);
- }
+
+void getSectorVarianceAndAverageColor(float angle, float radius, out vec3 avgColor, out float variance) {
+    vec3 colorSum = vec3(0.0);
+    vec3 squaredColorSum = vec3(0.0);
+    float sampleCount = 0.0;
+
+    for (float r = 1.0; r <= radius; r += 1.0) {
+        for (float a = -0.392699; a <= 0.392699; a += 0.196349) {
+            vec2 sampleOffset = r * vec2(cos(angle + a), sin(angle + a));
+            vec3 color = sampleColor(sampleOffset);
+            colorSum += color;
+            squaredColorSum += color * color;
+            sampleCount += 1.0;
+        }
+    }
+
+    // Calculate average color and variance
+    avgColor = colorSum / sampleCount;
+    vec3 varianceRes = (squaredColorSum / sampleCount) - (avgColor * avgColor);
+    variance = dot(varianceRes, vec3(0.299, 0.587, 0.114)); // Convert to luminance
+}
 
 void main()
 {
     if(useFilter) {
-        // Step for computing the sobol
-        float step = 0.001;
-        fColor = vec4(sobel(step, step, fUV), 1.0);
+        vec3 sectorAvgColors[SECTOR_COUNT];
+        float sectorVariances[SECTOR_COUNT];
+
+        for (int i = 0; i < SECTOR_COUNT; i++) {
+            float angle = float(i) * 6.28318 / float(SECTOR_COUNT); // 2π / SECTOR_COUNT
+            getSectorVarianceAndAverageColor(angle, float(radius), sectorAvgColors[i], sectorVariances[i]);
+        }
+
+        float minVariance = sectorVariances[0];
+        vec3 finalColor = sectorAvgColors[0];
+
+        for (int i = 1; i < SECTOR_COUNT; i++) {
+            if (sectorVariances[i] < minVariance) {
+                minVariance = sectorVariances[i];
+                finalColor = sectorAvgColors[i];
+            }
+        }
+
+        fColor = vec4(finalColor, 1.0);
     } else {
         // We use absolut value to better display the position
         fColor = abs(texture(iChannel0, fUV));

@@ -89,10 +89,12 @@ private:
 
 
 	enum VAO_IDs { Triangles, NumVAOs };
-	enum Buffer_IDs { ArrayBuffer, NumBuffers };
+	enum Buffer_IDs { Position, UV, NumBuffers };
 	GLuint m_VAOs[NumVAOs];
 	GLuint m_buffers[NumBuffers];
-
+	
+	// Filter parameters
+	int m_kernelSize = 3;
 	bool m_usePositionTexture = false;
 	bool m_activeFBO = false;
 	bool m_useFilter = false;
@@ -102,7 +104,8 @@ private:
 	{
 		// ID VAO/VBO
 		GLuint vao;
-		GLuint vbo;
+		GLuint vboPosition;
+		GLuint vboNormal;
 
 		// Material information
 		glm::vec3  diffuse;
