@@ -66,7 +66,7 @@ private:
 	unsigned int m_ARMTexID = -1;
 
 	enum VAO_IDs { Triangles, NumVAOs };
-	enum Buffer_IDs { ArrayBuffer, NumBuffers };
+	enum Buffer_IDs { Position, UV, Normal, Tangent, NumBuffers };
 
 	// GLFW Window
 	GLFWwindow* m_window = nullptr;

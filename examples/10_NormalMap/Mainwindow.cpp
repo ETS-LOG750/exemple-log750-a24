@@ -29,14 +29,14 @@ void MainWindow::FramebufferSizeCallback(int width, int height) {
 int MainWindow::Initialisation()
 {
     // OpenGL version (usefull for imGUI and other libraries)
-    const char* glsl_version = "#version 430 core";
+    const char* glsl_version = "#version 460 core";
 
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -120,8 +120,8 @@ glm::vec3 MainWindow::computeTangentFace(vec3x3 pos, vec2x3 uvs) const {
 
 int MainWindow::InitializeGL()
 {
-    glGenVertexArrays(NumVAOs, m_VAOs);
-    glGenBuffers(NumBuffers, m_buffers);
+    glCreateVertexArrays(NumVAOs, m_VAOs);
+    glCreateBuffers(NumBuffers, m_buffers);
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     glm::vec3 Vertices[NumVertices] = {
@@ -157,20 +157,19 @@ int MainWindow::InitializeGL()
     );
     std::cout << glm::to_string(t) << "\n";
 
-    glBindVertexArray(m_VAOs[Triangles]);
+    // Upload data to the GPU
+    glNamedBufferData(m_buffers[Position], sizeof(Vertices), Vertices, GL_STATIC_DRAW);
+    glNamedBufferData(m_buffers[UV], sizeof(Uvs), Uvs, GL_STATIC_DRAW);
+    glNamedBufferData(m_buffers[Normal], sizeof(Normals), Normals, GL_STATIC_DRAW);
+    glNamedBufferData(m_buffers[Tangent], sizeof(Tangents), Tangents, GL_STATIC_DRAW);
 
-    GLsizeiptr VerticesOffset = 0;
-    GLsizeiptr UvsOffset = sizeof(Vertices);
-    GLsizeiptr NormalsOffset = UvsOffset + sizeof(Uvs);
-    GLsizeiptr TangentsOffset = NormalsOffset +sizeof(Normals);
-    GLsizeiptr DataSize = TangentsOffset + sizeof(Tangents);
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffers[ArrayBuffer]);
-    glBufferData(GL_ARRAY_BUFFER, DataSize, nullptr, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, VerticesOffset, sizeof(Vertices), Vertices);
-    glBufferSubData(GL_ARRAY_BUFFER, UvsOffset, sizeof(Uvs), Uvs);
-    glBufferSubData(GL_ARRAY_BUFFER, NormalsOffset, sizeof(Normals), Normals);
-    glBufferSubData(GL_ARRAY_BUFFER, TangentsOffset, sizeof(Tangents), Tangents);
+    // Lambda function to configure a given VBO
+    auto configureVBO = [this](int location, int vaoID, int vboID, int nbComp, GLsizei stride) {
+        glVertexArrayVertexBuffer(vaoID, location, vboID, 0, stride);
+        glVertexArrayAttribFormat(vaoID, location, nbComp, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(vaoID, location, location);
+        glEnableVertexArrayAttrib(vaoID, location);
+    };
 
     // build and compile our shader program
     const std::string directory = SHADERS_DIR;
@@ -200,20 +199,16 @@ int MainWindow::InitializeGL()
     glUseProgram(m_mainShader->programId());
 
     int locPos = m_mainShader->attributeLocation("vPosition");
-    glVertexAttribPointer(locPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(VerticesOffset));
-    glEnableVertexAttribArray(locPos);
+    configureVBO(locPos, m_VAOs[Triangles], m_buffers[Position], 3, sizeof(glm::vec3));
 
     int locNor = m_mainShader->attributeLocation("vNormal");
-    glVertexAttribPointer(locNor, 3, GL_FLOAT,GL_TRUE, 0, BUFFER_OFFSET(NormalsOffset));
-    glEnableVertexAttribArray(locNor);
+    configureVBO(locNor, m_VAOs[Triangles], m_buffers[Normal], 3, sizeof(glm::vec3));
 
     int locTan = m_mainShader->attributeLocation("vTangent");
-    glVertexAttribPointer(locTan, 3, GL_FLOAT,GL_TRUE, 0, BUFFER_OFFSET(TangentsOffset));
-    glEnableVertexAttribArray(locTan);
+    configureVBO(locTan, m_VAOs[Triangles], m_buffers[Tangent], 3, sizeof(glm::vec3));
 
     int locUV = m_mainShader->attributeLocation("vUV");
-    glVertexAttribPointer(locUV, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(UvsOffset));
-    glEnableVertexAttribArray(locUV);
+    configureVBO(locUV, m_VAOs[Triangles], m_buffers[UV], 2, sizeof(glm::vec2));
 
     std::string assets_dir = ASSETS_DIR;
     std::string diffPath = assets_dir + "concrete_debris_diff_1k.jpg";
