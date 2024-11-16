@@ -46,3 +46,12 @@ Suivre les instructions sur ENA pour la mise en place de l'environment de travai
 
 ## Cours 08 (Animation)
 - `08_Particules` : Démonstration de la simulation de particule avec compute shaders.
+
+## Cours 09 (Textures)
+- `09_Texture`: Démonstration de comment utiliser les textures en OpenGL.
+- `09_Texture_bindless`: Méthode alternative pour la gestion des textures en OpenGL. 
+
+## Cours 10 (Textures avancées)
+- `10_Sky`: Démonstration d'un exemple de carte d'environement et du calcul de l'éclairage sur une sphère métalique.
+- `10_NormalMap`: Démonstration du normal mapping sur un simple plan.
+- `10_SimpleFBO`: Démonstration de l'utilisation d'un FBO pour capturer l'environement dans une texture. 
