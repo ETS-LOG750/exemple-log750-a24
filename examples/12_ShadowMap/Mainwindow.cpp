@@ -31,14 +31,14 @@ void MainWindow::FramebufferSizeCallback(int width, int height) {
 int MainWindow::Initialisation()
 {
 	// OpenGL version (usefull for imGUI and other libraries)
-	const char* glsl_version = "#version 430 core";
+	const char* glsl_version = "#version 460 core";
 
 	// glfw: initialize and configure
     // ------------------------------
 	glfwInit();
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -100,8 +100,8 @@ int MainWindow::InitializeGL()
 	glDepthFunc(GL_LEQUAL);
 
 	// Create VAOs and VBOs
-	glGenVertexArrays(NumVAOs, m_VAOs);
-	glGenBuffers(NumVBOs, VBOs);
+	glCreateVertexArrays(NumVAOs, m_VAOs);
+	glCreateBuffers(NumVBOs, VBOs);
 
 	// build and compile our shader program
 	const std::string directory = SHADERS_DIR;
@@ -199,33 +199,24 @@ int MainWindow::InitializeGL()
 
 	////////////////////////////////
 	// Create a framebuffer object
-	glGenFramebuffers(1, &DepthMapFBO);
+	glCreateFramebuffers(1, &DepthMapFBO);
 
 	// 1) create depth texture
-	glGenTextures(1, &TextureId);
-	glBindTexture(GL_TEXTURE_2D, TextureId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_SIZE_X, SHADOW_SIZE_Y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glCreateTextures(GL_TEXTURE_2D, 1, &TextureId);
+	// Peut etre aussi GL_DEPTH_COMPONENT32F vu que l'on a pas de stencil
+	glTextureStorage2D(TextureId, 1, GL_DEPTH24_STENCIL8, SHADOW_SIZE_X, SHADOW_SIZE_Y);
+	glTextureParameteri(TextureId, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTextureParameteri(TextureId, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTextureParameteri(TextureId, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTextureParameteri(TextureId, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// 2) attach depth texture as FBO's depth buffer
-	glBindFramebuffer(GL_FRAMEBUFFER, DepthMapFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, TextureId, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// Always check that our framebuffer is ok
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cout << "Framebuffer is not ok" << std::endl;
-		return 6; // Error
-	}
-	else
-	{
-		std::cout << "framebuffer is ok" << std::endl;
+	glNamedFramebufferTexture(DepthMapFBO, GL_DEPTH_ATTACHMENT, TextureId, 0);
+	glNamedFramebufferDrawBuffer(DepthMapFBO, GL_NONE);
+	glNamedFramebufferReadBuffer(DepthMapFBO, GL_NONE);
+	if(glCheckNamedFramebufferStatus(DepthMapFBO, GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cerr << "Error when creating FBO" << std::endl;
+		return 6;
 	}
 
 	// Tell the main shader that we will 
@@ -398,6 +389,15 @@ int MainWindow::InitPlane2D() {
 	return 0;
 }
 
+// Helper function to configure VBO
+inline void configureVBO(int location, int vaoID, int vboID, int nbComp, GLsizei stride) {
+	glVertexArrayVertexBuffer(vaoID, location, vboID, 0, stride);
+	glVertexArrayAttribFormat(vaoID, location, nbComp, GL_FLOAT, GL_FALSE, 0);
+	glVertexArrayAttribBinding(vaoID, location, location);
+	glEnableVertexArrayAttrib(vaoID, location);
+}
+
+
 int MainWindow::InitGeometryCube()
 {
 	// Create cube vertices and faces
@@ -469,30 +469,17 @@ int MainWindow::InitGeometryCube()
 	  { 20, 21, 22 }
 	};
 
-	// Set VAO
-	glBindVertexArray(m_VAOs[CubeVAO]);
-
-	// Fill vertex VBO
-	GLsizeiptr OffsetVertices = 0;
-	GLsizeiptr OffsetNormals = sizeof(VerticesCube);
-	GLsizeiptr DataSize = sizeof(VerticesCube) + sizeof(NormalsCube);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[CubeVBO]);
-	glBufferData(GL_ARRAY_BUFFER, DataSize, nullptr, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, OffsetVertices, sizeof(VerticesCube), VerticesCube);
-	glBufferSubData(GL_ARRAY_BUFFER, OffsetNormals, sizeof(NormalsCube), NormalsCube);
+	glNamedBufferData(VBOs[CubePosVBO], sizeof(VerticesCube), VerticesCube, GL_STATIC_DRAW);
+	glNamedBufferData(VBOs[CubeNormalVBO], sizeof(NormalsCube), NormalsCube, GL_STATIC_DRAW);
+	glNamedBufferData(VBOs[CubeEBO], sizeof(IndicesCube), IndicesCube, GL_STATIC_DRAW);
 
 	// Setup shader variables
 	int locPos = m_mainShader->attributeLocation("vPosition");
-	glVertexAttribPointer(locPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(OffsetVertices));
-	glEnableVertexAttribArray(locPos);
+	configureVBO(locPos, m_VAOs[CubeVAO], VBOs[CubePosVBO], 3, sizeof(glm::vec3));
 	int locNormal = m_mainShader->attributeLocation("vNormal");
-	glVertexAttribPointer(locNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(OffsetNormals));
-	glEnableVertexAttribArray(locNormal);
-
-	// Fill in indices VBO
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBOs[CubeEBO]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndicesCube), IndicesCube, GL_STATIC_DRAW);
+	configureVBO(locNormal, m_VAOs[CubeVAO], VBOs[CubeNormalVBO], 3, sizeof(glm::vec3));
+	// Bind EBO
+	glVertexArrayElementBuffer(m_VAOs[CubeVAO], VBOs[CubeEBO]);
 
 	return 0;
 }
@@ -513,25 +500,13 @@ int MainWindow::InitGeometryFloor()
 		{0, 1, 0}
 	};
 
-	// Set VAO
-	glBindVertexArray(m_VAOs[FloorVAO]);
-
-	// Fill vertex VBO
-	GLsizeiptr OffsetVertices = 0;
-	GLsizeiptr OffsetNormals = sizeof(VerticesFloor);
-	GLsizeiptr DataSize = sizeof(VerticesFloor) + sizeof(NormalsFloor);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[FloorVBO]);
-	glBufferData(GL_ARRAY_BUFFER, DataSize, nullptr, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VerticesFloor), VerticesFloor);
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(VerticesFloor), sizeof(NormalsFloor), NormalsFloor);
+	glNamedBufferData(VBOs[FloorPosVBO], sizeof(VerticesFloor), VerticesFloor, GL_STATIC_DRAW);
+	glNamedBufferData(VBOs[FloorNormalVBO], sizeof(NormalsFloor), NormalsFloor, GL_STATIC_DRAW);
 
 	int locPos = m_mainShader->attributeLocation("vPosition");
-	glVertexAttribPointer(locPos, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(OffsetVertices));
-	glEnableVertexAttribArray(locPos);
+	configureVBO(locPos, m_VAOs[FloorVAO], VBOs[FloorPosVBO], 3, sizeof(glm::vec3));
 	int locNormal = m_mainShader->attributeLocation("vNormal");
-	glVertexAttribPointer(locNormal, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(OffsetNormals));
-	glEnableVertexAttribArray(locNormal);
+	configureVBO(locNormal, m_VAOs[FloorVAO], VBOs[FloorNormalVBO], 3, sizeof(glm::vec3));
 
 	return 0;
 }

@@ -1,4 +1,4 @@
-#version 400 core
+#version 460 core
 
 uniform sampler2D texShadowMap;
 uniform vec4 uColor;
@@ -28,6 +28,13 @@ void main()
     //  and depth values (z) from NDC to the range [0...1]
     //
     vec3 coord = 0.5*(fShadowCoord.xyz / fShadowCoord.w)+0.5;
+
+    // Debug function which can be helpful for debugging
+    if(coord.x < 0 || coord.x > 1 || coord.y < 0 || coord.y > 1) {
+        // Return green color if the coordinate is outside the shadow map see
+        oColor = vec4(0.0, 1.0, 0.0, 1.0);
+        return;
+    }
 
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
     float closestDepth = texture(texShadowMap, coord.xy).r; 

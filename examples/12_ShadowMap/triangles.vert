@@ -1,4 +1,4 @@
-#version 400 core
+#version 460 core
 
 uniform mat4 MVMatrix;
 uniform mat4 ProjMatrix;

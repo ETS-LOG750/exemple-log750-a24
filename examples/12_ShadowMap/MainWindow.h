@@ -113,7 +113,7 @@ private:
 	unsigned int TextureId = 0;
 
 	enum VAO_IDs { CubeVAO, FloorVAO, Plane2DVAO, NumVAOs };
-	enum VBO_IDs { CubeVBO, CubeEBO, FloorVBO, Plane2DVBO, NumVBOs };
+	enum VBO_IDs { CubePosVBO, CubeNormalVBO, CubeEBO, FloorPosVBO, FloorNormalVBO, Plane2DVBO, NumVBOs };
 
 	GLuint m_VAOs[NumVAOs];
 	GLuint VBOs[NumVBOs];
