@@ -73,6 +73,8 @@ private:
 		GLint Ks = 4;
 		GLint Kn = 5;
 		GLint light_position = 6;
+		GLint light_position2 = 7;
+		GLint light_position3 = 8;
 	} m_mainUniforms;
 
 	// FBO result

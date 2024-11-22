@@ -270,6 +270,9 @@ void MainWindow::RenderScene()
 	m_mainShader->setMat4(m_mainUniforms.projMatrix, m_proj);
 	m_mainShader->setMat3(m_mainUniforms.normalMatrix, glm::inverseTranspose(glm::mat3(modelViewMatrix)));
 	m_mainShader->setVec3(m_mainUniforms.light_position, viewMatrix * glm::vec4(m_light_position, 1.0));
+	m_mainShader->setVec3(m_mainUniforms.light_position2, viewMatrix * glm::vec4(glm::vec3(-m_light_position.x, m_light_position.y, m_light_position.z), 1.0));
+	m_mainShader->setVec3(m_mainUniforms.light_position2, viewMatrix * glm::vec4(glm::vec3(m_light_position.x, -m_light_position.y, -m_light_position.z), 1.0));
+
 
 	// Draw the meshes
 	for(const MeshGL& m : m_meshesGL)
