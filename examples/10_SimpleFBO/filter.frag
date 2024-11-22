@@ -16,7 +16,7 @@ layout(location = 3) uniform vec2 resolution;
 
 vec3 sampleColor(vec2 offset) {
     vec2 coord = (gl_FragCoord.xy + offset) / resolution.xy;
-    return texture2D(iChannel0, coord).rgb;
+    return abs(texture2D(iChannel0, coord).rgb);
 }
 
 void getSectorVarianceAndAverageColor(float angle, float radius, out vec3 avgColor, out float variance) {
