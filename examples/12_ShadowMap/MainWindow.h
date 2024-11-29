@@ -66,6 +66,7 @@ private:
 		GLint biasValue = -1; 
 		GLint biasValueMin = -1;
 	} m_mainUniforms;
+	bool m_frontFaceCulling = false;
 
 	// Shadow map shader
 	std::unique_ptr<ShaderProgram> m_shadowMapShader = nullptr;
@@ -76,8 +77,8 @@ private:
 	// Debug shader
 	std::unique_ptr<ShaderProgram> m_debugShader = nullptr;
 	struct {
-		GLint tex = -1;
-		GLint scale = -1;
+		GLint tex = 0;
+		GLint scale = 0;
 	} m_debugUniforms;
 	bool m_debug = false;
 	float m_debugScale = 1.0f;
@@ -101,7 +102,6 @@ private:
 	int m_biasType = 0;
 	float m_biasValue = 0.0005f;
 	float m_biasValueMin = 0.00005f;
-
 
 	// Face cube
 	static const int NumFacesCube = 6;

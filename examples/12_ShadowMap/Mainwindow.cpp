@@ -259,10 +259,8 @@ void MainWindow::RenderScene()
 	m_mainShader->setFloat(m_mainUniforms.biasValue, m_biasValue);
 	m_mainShader->setFloat(m_mainUniforms.biasValueMin, m_biasValueMin);
 
-
 	// Activate texture containing the shadow map
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, TextureId);
+	glBindTextureUnit(0, TextureId);
 
 	// Draw WHITE floor
 	glm::mat4 modelMatrix = glm::mat4(1.0);
@@ -293,8 +291,7 @@ void MainWindow::RenderScene()
 		glUseProgram(m_debugShader->programId());
 		m_debugShader->setFloat(m_debugUniforms.scale, m_debugScale);
 		
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, TextureId);
+		glBindTextureUnit(0, TextureId);
 
 		glBindVertexArray(m_VAOs[Plane2DVAO]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -333,6 +330,7 @@ void MainWindow::RenderImgui()
 		ImGui::ListBox("Type", &m_biasType, items, IM_ARRAYSIZE(items));
 		ImGui::InputFloat("Value", &m_biasValue, 0.01f, 1.0f, "%.6f");
 		ImGui::InputFloat("Value Min", &m_biasValueMin, 0.01f, 1.0f, "%.6f");
+		ImGui::Checkbox("Front face culling", &m_frontFaceCulling);
 
 		ImGui::End();
 	}
@@ -513,6 +511,15 @@ int MainWindow::InitGeometryFloor()
 
 void MainWindow::ShadowRender()
 {
+	
+	if (m_frontFaceCulling) {
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+	}
+	else {
+		glDisable(GL_CULL_FACE);
+	}	
+
 	// Save viewport information
 	GLint viewport[4];
 	glGetIntegerv(GL_VIEWPORT, viewport);
@@ -559,6 +566,11 @@ void MainWindow::ShadowRender()
 
 	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 	glClearColor(0, 0, 0, 1);
+
+	if (m_frontFaceCulling) {
+		glDisable(GL_CULL_FACE);
+		// glCullFace(GL_BACK);
+	}
 }
 
 void MainWindow::UpdateLightPosition(float delta_time)

@@ -1,7 +1,7 @@
 #version 460 core
 
-uniform sampler2D tex;
-uniform float scale;
+layout(binding = 0) uniform sampler2D tex;
+layout(location = 0) uniform float scale;
 
 in vec2 fUV;
 
