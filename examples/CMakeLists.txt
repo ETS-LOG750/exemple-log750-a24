@@ -56,6 +56,8 @@ add_subdirectory(10_Sky)
 # - FBO
 add_subdirectory(10_SimpleFBO)
 
-# Seance 12: Shadow
+# Seance 12+13: Shadow
 # - Shadow map
 add_subdirectory(12_ShadowMap)
+# - Shadow volume
+add_subdirectory(13_ShadowVolume)
